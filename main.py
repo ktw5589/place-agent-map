@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -18,6 +20,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.mount("/static", StaticFiles(directory="static"), name="static")
+SEARCH_CONCURRENCY = 3
 
 
 class PlaceCreate(BaseModel):
@@ -49,6 +52,22 @@ def places():
     return {"places": list_places()}
 
 
+@app.get("/api/places/summary")
+def places_summary():
+    compact_places = []
+    for place in list_places():
+        compact_places.append({
+            "id": place["id"],
+            "name": place["name"],
+            "user_rating": place["user_rating"],
+            "provider": place["provider"],
+            "address": place["address"],
+            "provider_rating": place["provider_rating"],
+            "category": place["category"],
+        })
+    return {"count": len(compact_places), "places": compact_places}
+
+
 @app.post("/api/places")
 async def create_place(payload: PlaceCreate):
     place = await lookup_place(payload.name.strip())
@@ -64,11 +83,17 @@ async def search(payload: SearchRequest):
     if not candidates:
         return {"query": payload.query, "results": []}
 
-    results = []
-    for place in candidates:
-        ai_result = await analyze_place_for_query(payload.query, place)
+    semaphore = asyncio.Semaphore(SEARCH_CONCURRENCY)
+
+    async def analyze_one(place: dict) -> dict:
+        async with semaphore:
+            ai_result = await analyze_place_for_query(payload.query, place)
         score = compute_final_score(place, ai_result)
-        results.append({**place, **score, "ai": ai_result})
+        return {**place, **score, "ai": ai_result}
+
+    results = await asyncio.gather(*(analyze_one(place) for place in candidates))
+    for place in results:
+        place.pop("photo_refs", None)
 
     results.sort(key=lambda item: item["final_score"], reverse=True)
     log_search(payload.query, len(results))

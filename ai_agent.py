@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 
@@ -17,6 +18,8 @@ DEFAULT_ANALYSIS = {
     "tags": [],
     "reason": "API 키가 없거나 분석에 실패해 기본 점수로 계산했습니다.",
 }
+
+AI_TIMEOUT_SECONDS = 18
 
 
 def _strip_json_fence(text: str) -> str:
@@ -108,11 +111,17 @@ async def analyze_place_for_query(query: str, place: dict) -> dict:
             data, mime = photo
             parts.append(types.Part.from_bytes(data=data, mime_type=mime))
 
-    try:
+    def _generate():
         client = genai.Client(api_key=api_key)
-        response = client.models.generate_content(
+        return client.models.generate_content(
             model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
             contents=parts,
+        )
+
+    try:
+        response = await asyncio.wait_for(
+            asyncio.to_thread(_generate),
+            timeout=AI_TIMEOUT_SECONDS,
         )
         parsed = json.loads(_strip_json_fence(response.text or ""))
         return {
@@ -123,4 +132,6 @@ async def analyze_place_for_query(query: str, place: dict) -> dict:
             "reason": str(parsed.get("reason") or DEFAULT_ANALYSIS["reason"]),
         }
     except Exception:
-        return _heuristic_analysis(query, place)
+        fallback = _heuristic_analysis(query, place)
+        fallback["reason"] = "Gemini 분석이 지연되거나 실패해 기본 규칙으로 계산했습니다."
+        return fallback
