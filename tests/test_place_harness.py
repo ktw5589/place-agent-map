@@ -15,7 +15,9 @@ class PlaceHarnessTest(unittest.TestCase):
         self.tmp = tempfile.NamedTemporaryFile(delete=False)
         self.tmp.close()
         self.old_db = database.DB_PATH
+        self.old_use_postgres = database.USE_POSTGRES
         database.DB_PATH = self.tmp.name
+        database.USE_POSTGRES = False
         database.init_db()
 
         import main
@@ -24,6 +26,7 @@ class PlaceHarnessTest(unittest.TestCase):
 
     def tearDown(self):
         database.DB_PATH = self.old_db
+        database.USE_POSTGRES = self.old_use_postgres
         os.unlink(self.tmp.name)
 
     def test_add_place_saves_only_user_rating_and_provider_metadata(self):
