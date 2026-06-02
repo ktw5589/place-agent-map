@@ -164,6 +164,10 @@ button.is-loading .spinner { display: inline-block; }
   color: #d04747;
   border: 1px solid #ffd0d0;
 }
+.result-delete {
+  margin-top: 10px;
+  min-width: 96px;
+}
 @media (max-width: 860px) {
   .app { grid-template-columns: 1fr; }
   .panel { border-right: 0; border-bottom: 1px solid #d8dde5; }

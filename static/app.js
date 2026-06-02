@@ -38,6 +38,7 @@ function renderResults(results) {
       <span class="score">AI 재해석 점수 ${place.final_score}점</span>
       <p class="meta">평균 평점 ${place.user_rating} · 참여 ${place.rating_count ?? 1}명 · 지도 평점 ${place.provider_rating ?? "없음"} · ${place.category ?? "분류 없음"}</p>
       <p class="reason">${place.ai?.reason ?? ""}</p>
+      <button class="delete-place result-delete" type="button" data-id="${place.id}" aria-label="${place.name} 삭제">이 장소 삭제</button>
     </article>
   `).join("");
 }
@@ -80,6 +81,12 @@ async function loadPlaces() {
 }
 
 document.getElementById("places-list").addEventListener("click", async (event) => {
+  const button = event.target.closest(".delete-place");
+  if (!button) return;
+  await deletePlace(button.dataset.id);
+});
+
+document.getElementById("results").addEventListener("click", async (event) => {
   const button = event.target.closest(".delete-place");
   if (!button) return;
   await deletePlace(button.dataset.id);
