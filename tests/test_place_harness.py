@@ -85,6 +85,50 @@ class PlaceHarnessTest(unittest.TestCase):
         self.assertGreater(results[0]["final_score"], 80)
         self.assertIn("공부 목적", results[0]["ai"]["reason"])
 
+    def test_duplicate_place_ratings_are_merged_by_average(self):
+        first = {
+            "name": "맥도날드 중앙대점",
+            "user_rating": 4.0,
+            "provider": "google",
+            "provider_place_id": "places/mcdonalds-cau",
+            "address": "서울 동작구",
+            "latitude": 37.5,
+            "longitude": 126.95,
+            "provider_rating": 4.2,
+            "category": "fast_food_restaurant",
+            "photo_refs": "[]",
+        }
+        second = {**first, "user_rating": 3.0}
+
+        first_id = database.add_place(first)
+        second_id = database.add_place(second)
+
+        self.assertEqual(first_id, second_id)
+        places = database.list_places()
+        self.assertEqual(len(places), 1)
+        self.assertEqual(places[0]["name"], "맥도날드 중앙대점")
+        self.assertEqual(places[0]["user_rating"], 3.5)
+        self.assertEqual(places[0]["rating_count"], 2)
+
+    def test_delete_place_removes_registered_rating(self):
+        place_id = database.add_place({
+            "name": "삭제할 카페",
+            "user_rating": 4.0,
+            "provider": "google",
+            "provider_place_id": "places/delete-me",
+            "address": "서울",
+            "latitude": 37.56,
+            "longitude": 126.97,
+            "provider_rating": 4.2,
+            "category": "cafe",
+            "photo_refs": "[]",
+        })
+
+        res = self.client.delete(f"/api/places/{place_id}")
+
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(database.list_places(), [])
+
     def test_ranking_weights_user_map_and_ai_scores(self):
         result = compute_final_score(
             {"user_rating": 5, "provider_rating": 4},

@@ -28,12 +28,20 @@
         <h2>AI 검색</h2>
         <label>원하는 조건</label>
         <input id="search-query" placeholder="예: 조용한 공부를 할 수 있는 카페" required />
-        <button type="submit">AI로 추천받기</button>
+        <button id="search-button" type="submit">
+          <span class="button-label">AI로 추천받기</span>
+          <span class="spinner" aria-hidden="true"></span>
+        </button>
       </form>
 
       <section class="box">
         <h2>추천 결과</h2>
         <div id="results" class="results">아직 검색 결과가 없습니다.</div>
+      </section>
+
+      <section class="box">
+        <h2>등록된 평점</h2>
+        <div id="places-list" class="places-list">아직 등록된 장소가 없습니다.</div>
       </section>
     </section>
 

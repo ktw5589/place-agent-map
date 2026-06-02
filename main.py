@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from ai_agent import analyze_place_for_query
-from database import add_place, init_db, list_places, log_search
+from database import add_place, delete_place, init_db, list_places, log_search
 from map_provider import lookup_place
 from ranking import compute_final_score
 
@@ -64,6 +64,7 @@ def places_summary():
             "address": place["address"],
             "provider_rating": place["provider_rating"],
             "category": place["category"],
+            "rating_count": place.get("rating_count", 1),
         })
     return {"count": len(compact_places), "places": compact_places}
 
@@ -75,6 +76,13 @@ async def create_place(payload: PlaceCreate):
     place_id = add_place(place)
     place["id"] = place_id
     return {"place": place}
+
+
+@app.delete("/api/places/{place_id}")
+def remove_place(place_id: int):
+    if not delete_place(place_id):
+        raise HTTPException(status_code=404, detail="place not found")
+    return {"deleted": True, "id": place_id}
 
 
 @app.post("/api/search")
