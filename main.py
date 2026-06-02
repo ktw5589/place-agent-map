@@ -23,6 +23,14 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 SEARCH_CONCURRENCY = 3
 
 
+@app.middleware("http")
+async def no_cache_for_app_assets(request, call_next):
+    response = await call_next(request)
+    if request.url.path == "/" or request.url.path.startswith("/static/"):
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    return response
+
+
 class PlaceCreate(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     user_rating: float = Field(ge=0, le=5)
